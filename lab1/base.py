@@ -30,7 +30,8 @@ def power(x_train, y_train, n=2, learning_rate=0.0005, epochs=1000, l2=0, Print=
 
     # set and initialize parameters here
     # intercept
-    b = np.float64(0)
+    # b = np.float64(0)
+    b = np.float64(-10)
     # weights
     w = np.float64(np.random.randn(n, 1))
 
@@ -46,7 +47,7 @@ def power(x_train, y_train, n=2, learning_rate=0.0005, epochs=1000, l2=0, Print=
     Z = b + np.dot(w.T, X)
     dZ = Z - Y
     cost = 0.5/m * np.dot(dZ, dZ.T)
-    costs.append(np.float64(cost.squeeze()))
+    costs.append(cost.squeeze())
 
     # train on the dataset
     for epoch in range(epochs):
@@ -62,9 +63,9 @@ def power(x_train, y_train, n=2, learning_rate=0.0005, epochs=1000, l2=0, Print=
         w -= learning_rate * dw + l2 * w
         b -= learning_rate * db
 
-        cost = np.float32(np.squeeze(0.5/m * np.dot(dZ, dZ.T)))
+        cost = np.squeeze(0.5/m * np.dot(dZ, dZ.T))
         costs.append(cost)
-        if Print == True and epoch % 10000 == 0:
+        if Print == True and epoch % 25 == 0:
             print("Cost after " + str(epoch) + " iterations " + ": " + str(cost))
 
     # plot the costs
@@ -92,6 +93,8 @@ def power(x_train, y_train, n=2, learning_rate=0.0005, epochs=1000, l2=0, Print=
 
         # to predict
         Y = b + np.dot(w.T, X)
+
+        # print(Y.squeeze())
 
         return Y.squeeze()
 
@@ -352,16 +355,15 @@ def mix(x_train, y_train, learning_rate=0.0005, epochs=50000, l2=0, Print=True):
     m = x_train.shape[0]
 
     # set some params and init them
-    w0 = np.float64(-10)
+    w0 = np.float64(-30)
     w1 = np.random.randn()
     w2 = np.float64(1e-2)
     c = np.random.randn()
-    d = np.float64(np.pi/12)
+    d = np.float64(np.pi/20)
     b = np.float64(2*np.pi/5)
 
     # to store costs
     costs = []
-    W = []
 
     for epoch in range(epochs):
         # forward-prop
@@ -385,17 +387,18 @@ def mix(x_train, y_train, learning_rate=0.0005, epochs=50000, l2=0, Print=True):
         dw2 = np.mean(dY * X * X)
 
         # update params
-        w0 -= learning_rate * dw0 + l2 * w0
+        w0 -= learning_rate * dw0
         w1 -= learning_rate * dw1 + l2 * w1
-        beta = 1e-3
-        w2 -= beta * learning_rate * dw2 + l2 * w2
+        # beta = 1e-3
+        # w2 -= beta * learning_rate * dw2 + l2 * w2
+        w2 = 0.0013
         if no_sin is False:
             alpha = 1e3
             c -= alpha * learning_rate * dc
-            d -= alpha * learning_rate * dd
+            # d -= alpha * learning_rate * dd
+            d = np.pi / 19
             b -= alpha * learning_rate * db
 
-        W.append(w2)
         # store the cost
         costs.append(cost)
         if Print is True and epoch % 10000 == 0:
@@ -408,9 +411,6 @@ def mix(x_train, y_train, learning_rate=0.0005, epochs=50000, l2=0, Print=True):
         plt.title("Costs")
         plt.show()
 
-    plt.plot(W)
-    plt.title("w2")
-    plt.show()
 
     def model(x):
         assert type(x) is np.ndarray

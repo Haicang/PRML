@@ -4,6 +4,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+from base import *
 
 
 def load_data(filename):
@@ -25,23 +26,49 @@ def evaluate(ys, ys_pred):
 def main(x_train, y_train):
     """训练模型，并返回从x到y的映射。"""
 
-    # 使用线性回归训练模型，根据训练集计算最优化参数
-    ## 请补全此处代码，替换以下示例
+    # # 使用线性回归训练模型，根据训练集计算最优化参数
+    # # 请补全此处代码，替换以下示例
     # phi0 = np.expand_dims(np.ones_like(x_train), axis=1)
     # phi1 = np.expand_dims(x_train, axis=1)
     # phi = np.concatenate([phi0, phi1], axis=1)
     # w = np.dot(np.linalg.pinv(phi), y_train)
 
-    # 返回从x到y的映射函数y=f(x)
-    # 注意：函数f(x)的变量只有x，参数w应作为内部变量
-    def f(x):
-        ## 请补全此处代码，替换以下示例
-        # phi0 = np.expand_dims(np.ones_like(x), axis=1)
-        # phi1 = np.expand_dims(x, axis=1)
-        # phi = np.concatenate([phi0, phi1], axis=1)
-        # y = np.dot(phi, w)
-        # return y
-        pass
+    # # 返回从x到y的映射函数y=f(x)
+    # # 注意：函数f(x)的变量只有x，参数w应作为内部变量
+    # def f(x):
+    #     ## 请补全此处代码，替换以下示例
+    #     phi0 = np.expand_dims(np.ones_like(x), axis=1)
+    #     phi1 = np.expand_dims(x, axis=1)
+    #     phi = np.concatenate([phi0, phi1], axis=1)
+    #     y = np.dot(phi, w)
+    #     return y
+    #     pass
+
+
+    # # for different models, the following hyperparameters differs
+    # # please set them as the report
+    # # the number of base functions:
+    # n = 2
+    # # the iteration times
+    # epochs = 20000
+    # # the learning rate
+    # lr = 1e-7
+    # # the l2 penalty factor
+    # l2 = 1e-4
+
+    # 请在下面选择一个需要测试的模型，这里的每个函数都返回一个符合主程序测试规范的模型
+
+    # # 调用多项式基函数
+    # f = power(x_train, y_train, n=2, epochs=10000, Print=False, learning_rate=1e-8, l2=5e-2)
+
+    # # 调用高斯基函数
+    # f = gaussian(x_train, y_train, n=3, epochs=500000, Print=False, learning_rate=1e-2, l2=0)
+
+    # # 调用 sigmoid 基函数
+    # f = sigmoid_base(x_train, y_train, n=10, epochs=90000, Print=False, learning_rate=1e-2, l2=0)
+    
+    # # 调用混合基函数（多项式基函数 + sin）
+    f = mix(x_train, y_train, epochs=200000, Print=False, learning_rate=1e-5, l2=0)
 
     return f
 
@@ -68,11 +95,11 @@ if __name__ == '__main__':
     print('预测值与真实值的标准差：{:.1f}'.format(std))
 
     # 显示结果
-    # plt.plot(x_train, y_train, 'ro', markersize=3)
-    # plt.plot(x_test, y_test, 'k')
-    # plt.plot(x_test, y_test_pred)
-    # plt.xlabel('x')
-    # plt.ylabel('y')
-    # plt.title('Linear Regression')
-    # plt.legend(['train', 'test', 'pred'])
-    # plt.show()
+    plt.plot(x_train, y_train, 'ro', markersize=3)
+    plt.plot(x_test, y_test, 'k')
+    plt.plot(x_test, y_test_pred)
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.title('Linear Regression')
+    plt.legend(['train', 'test', 'pred'])
+    plt.show()
