@@ -5,6 +5,7 @@ import numpy as np
 from cvxopt import matrix
 from cvxopt.solvers import qp
 import matplotlib.pyplot as plt
+from utils import *
 
 
 # define some kernel functions here
@@ -76,12 +77,14 @@ class SVM():
     SVM模型。
     """
 
-    def __init__(self, C=1, n_classes=2, kernel='g', loss=None):
+    def __init__(self, C=1, n_classes=2, kernel='g', loss=None, 
+        decision_function_shape='ovr'):
         """
         C: the hyperparameter in svm for overlap distribution
         n_classes: the number of classification class
         kernel: {'g': gaussian, 'l': linear, 'p': ploy}
         loss: None for Lagrange max, 'hinge' for hinge loss(only for linear)
+        decision_function_shape
         """
         self.n = n_classes
         self.kernel = Kernels[kernel]
@@ -89,11 +92,17 @@ class SVM():
 
         # a.shape = (m, 1)
         # only support vectors' a are stored,
+        # number of support vectors
         self.num = None  # real number
+        # support vectors' indexes
         self.index = None
+        # support vectors' coef
         self.a = None
+        # intercept
         self.b = None  # real number
+        # support vectors' targets
         self.t = None
+        # support vectors
         self.x = None
 
         self.w = None  # only used for linear kernel in hinge loss
@@ -111,10 +120,11 @@ class SVM():
             self.fit_kernel(x_train, t_train)
         elif self.loss == 'hinge':
             # Only linear kernel is valid for hinge loss
+            # self.kernel = linear
             assert self.kernel == linear
             self.fit_hinge(x_train, t_train, epoches)
         else:
-            raise Exception
+            raise Exception('Loss function not found.')
 
         pass
 
@@ -128,7 +138,7 @@ class SVM():
             K = self.kernel(self.x, x)  # (num, n)
             a = self.a.reshape(-1, 1)
             t = self.t.reshape(-1, 1)
-            y = np.sum(a * t * K) + self.b
+            y = np.sum(a * t * K, axis=0) + self.b
             y = y.squeeze()
         elif self.loss == 'hinge':
             X = x.T  # (2, m)
@@ -150,42 +160,57 @@ class SVM():
 
         # Get the Kernel matrix for the whole training set (Gram matrix)
         K = self.kernel(X, X)
+        # print(K)
 
         # maximize the L is minimize -L
+        # 1/2 x^T P x + q^T x
         P = matrix(np.dot(t, t.T) * K)
         q = matrix(- np.ones(shape=(n, 1)))
 
+        # use for the bound of x
+        # 0 <= x <= C
         I = np.identity(n)
         G = np.zeros((2 * n, n))
-        G[0:n, :] = I
-        G[n: , :] = -I
+        G[:n, :] = I
+        G[n:, :] = -I
         G = matrix(G)
         h = np.zeros((2 * n, 1))
         h[0:n, :] = self.C
         h = matrix(h)
 
-        A = matrix(np.diag(t.squeeze()))
-        b = matrix(np.zeros((n, 1)))
+        # \sum a_n = 0
+        A = matrix(t.reshape(1, -1))
+        b = matrix(0.0)
 
         sol = qp(P, q, G, h, A, b)
         a = np.array(sol['x'])
         a = a.squeeze()
-        print(sol)
-        return sol
+        # print(sol)
+        if sol['status'] is not 'optimal':
+            raise NotOptimal('Quadratic Optimazation Fail')
+        # print(a)
+        
+        # If the coef of support vectors are too small,
+        # change them to 0.
+        a[np.abs(a) < DELTA] = 0
 
+        # Store support vectors coef
         self.a = a[a != 0]
+        # support vectors' indexes
         index = np.array(range(n))
         self.index = index[a != 0]
+        # support vectors' targets
         self.t = t[self.index, 0]
+        # number of support vectors
         self.num = self.index.shape[0]
-        print(self.num)
+        # print(self.num)
 
         # use the support vectors to calcuate intercept, 's' means 'support'
         self.x = X[self.index, :]
         K_s = self.kernel(self.x, self.x)
-        col = self.a.reshape(1, -1) * t[self.x, :].reshape(1, -1) * K_s
+        col = self.a.reshape(1, -1) * t[self.index, :].reshape(1, -1) * K_s
         col = np.sum(col, axis=1, keepdims=False)
-        self.b = 1./self.num * np.sum(np.squeeze(t) - col, keepdims=False)
+        self.b = 1./self.num * np.sum(np.squeeze(self.t) - col, keepdims=False)
 
     def fit_hinge(self, X, t, epoches=1000, lr=0.0001, l = 0.01):
         """
