@@ -4,6 +4,7 @@
 import numpy as np
 from cvxopt import matrix
 from cvxopt.solvers import qp
+import matplotlib.pyplot as plt
 
 
 # define some kernel functions here
@@ -41,6 +42,10 @@ def poly(x1, x2, p=2):
 
 Kernels = {'g': gaussian, 'l': linear, 'p': poly}
 # Kernel functions define ends
+
+
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
 
 
 def load_data(fname):
@@ -91,9 +96,11 @@ class SVM():
         self.t = None
         self.x = None
 
+        self.w = None  # only used for linear kernel in hinge loss
+
         self.loss = loss
 
-    def train(self, data_train):
+    def train(self, data_train, epoches=1000):
         """
         训练模型。
         """
@@ -105,7 +112,7 @@ class SVM():
         elif self.loss == 'hinge':
             # Only linear kernel is valid for hinge loss
             assert self.kernel == linear
-            self.fit_hinge(x_train, t_train)
+            self.fit_hinge(x_train, t_train, epoches)
         else:
             raise Exception
 
@@ -114,13 +121,25 @@ class SVM():
     def predict(self, x):
         """
         预测标签。
+        x: (m, 2)
         """
         # n = x.shape[0]
-        K = self.kernel(self.x, x)  # (num, n)
-        a = self.a.reshape(-1, 1)
-        t = self.t.reshape(-1, 1)
-        y = np.sum(a * t * K) + self.b
-        return y.T
+        if self.loss == None:
+            K = self.kernel(self.x, x)  # (num, n)
+            a = self.a.reshape(-1, 1)
+            t = self.t.reshape(-1, 1)
+            y = np.sum(a * t * K) + self.b
+            y = y.squeeze()
+        elif self.loss == 'hinge':
+            X = x.T  # (2, m)
+            Y = np.dot(self.w.reshape(1, -1), X) + self.b  # (1, m)
+            y = Y.squeeze()  # (m, 1)
+        else:
+            raise Exception
+
+        y[y >= 0] = 1
+        y[y < 0] = -1
+        return y
 
     def fit_kernel(self, X, t):
         """
@@ -168,12 +187,225 @@ class SVM():
         col = np.sum(col, axis=1, keepdims=False)
         self.b = 1./self.num * np.sum(np.squeeze(t) - col, keepdims=False)
 
-
-    def fit_hinge(self, X, t):
+    def fit_hinge(self, X, t, epoches=1000, lr=0.0001, l = 0.01):
         """
         Use the hinge loss for linear kernel
+        X: (m, 2)
+        t: (m, )
+        lr: learning_rate
+        l: l-2 penalty
+        m is # training e.g.
+        Use gradient descent to optimize
         """
-        pass
+        # X:(2, m)  t:(1, m)
+        X = X.T
+        t = t.reshape(1, -1)
+        m = X.shape[1]
+
+        # intialization
+        w = np.random.randn(2, 1)
+        b = 0
+
+        for _ in range(epoches):
+            # forward
+            Y = np.dot(w.T, X) + b  # (1, n)
+            Z = 1 - Y * t  # (1, n)
+
+            # back
+            dw = -X
+            dw[:, Z.squeeze() <= 0] = 0
+            dw = np.sum(dw, axis=1, keepdims=True)  # (2, 1)
+            db = - np.ones((1, m))
+            db[:, Z.squeeze() <= 0] = 0
+            db = np.sum(db, keepdims=False)
+
+            # update
+            # use mean here
+            w = (1 - 2 * l * lr / m) * w - lr * dw / m
+            b = b - lr * db / m
+        
+        self.w = w.squeeze()
+        self.b = b
+
+
+class Linear():
+    """
+    Linear classifier with squared error
+    
+    loss = sum (y_n - t_n)^2  - lambda * w.T w
+    
+    Also use mean for it, that is actually use the mean square error (MSE)
+    """
+    def __init__(self):
+        self.w = None
+        self.b = None
+
+    def fit(self, X, y, epoches=100, lr=0.01, l=0.01, show_loss=False):
+        """
+        Train the linear classifier with the training set
+        X: (m, n)  training features
+        y: (m, )  training targets
+        epoches: iterating times
+        lr: learning rate
+        l:  l-2 penalty
+        """
+        # reshape the training data
+        # X:(n, m)  Y:(1, m)
+        X = X.transpose()
+        Y = y.reshape(1, -1)
+        
+        # m: number of training e.g.
+        # n: number of features
+        n, m = X.shape
+
+        # parameters
+        w = np.random.randn(n, 1)
+        b = 0
+
+        # losses
+        if show_loss is True:
+            losses = []
+
+        for i in range(epoches):
+            # forward
+            # the predictions (1, m)
+            P = np.dot(w.T, X) + b
+            Z = P - Y
+
+            # compute loss
+            if show_loss is True:
+                loss = np.squeeze(np.sum(Z ** 2, keepdims=False) + l * np.dot(w.T, w))
+                losses.append(loss)
+
+            # back
+            dw = 2 * Z * X
+            dw = np.sum(dw, axis=1, keepdims=True)
+            db = np.sum(Z, axis=1, keepdims=False)
+
+            # update
+            w = (1 - 2 * l * lr / m) * w - lr * dw / m
+            b = b - lr * db / m
+
+            if show_loss is True and i % 100 == 0:
+                print('{}, loss: {}'.format(i, loss))
+
+        if show_loss is True:
+            print(losses[len(losses) - 1])
+            plt.plot(losses)
+
+        self.w = w.squeeze()
+        self.b = b
+
+    def train(self, data, epoches=100, lr=0.01, l=0.01, show_loss=False):
+        X, y = data[:, 0:2], data[:, 2]
+        self.fit(X, y, epoches, lr, l, show_loss)
+
+    def predict(self, X):
+        """
+        Give predictions on the trained model
+        X: (m, n)  m(# training e.g.)  n(# features)
+
+        return y: (m, )
+        """
+        # reshape
+        X = X.transpose()  # (n, m)
+        w = self.w.reshape(-1, 1)  # (n, 1)
+        b = self.b
+
+        y = np.dot(w.T, X) + b
+        y = y.squeeze()
+        y[y <  0] = -1
+        y[y >= 0] = 1
+        return y
+
+
+class Logistic():
+    """
+    Logistic regression with cross entropy loss
+    """
+    def __init__(self):
+        self.w = None
+        self.b = None
+
+    def fit(self, X, y, epoches=1000, lr=0.01, l=0.01, show_loss=False):
+        """
+        Train the linear classifier with the training set
+        X: (m, n)  training features
+        y: (m, )  training targets
+        epoches: iterating times
+        lr: learning rate
+        l:  l-2 penalty
+        """
+        # reshape the training data
+        # X:(n, m)  Y:(1, m)
+        X = X.transpose()
+        Y = y.reshape(1, -1)
+
+        # m: number of training e.g.
+        # n: number of features
+        n, m = X.shape
+
+        # parameters
+        w = np.random.randn(n, 1)
+        b = 0
+
+        # losses
+        if show_loss is True:
+            losses = []
+
+        for i in range(epoches):
+            # forward
+            Z = np.dot(w.T, X) + b
+            A = sigmoid(Z * Y)
+
+            # compute loss
+            if show_loss is True:
+                loss = np.squeeze(
+                    np.sum(Z ** 2, keepdims=False) + l * np.dot(w.T, w))
+                losses.append(loss)
+
+            # backprop
+            # dA = - 1/A
+            # dZ = dA * A * (1 - A) * Y
+            dZ = -(1 - A) * Y
+            dw = np.sum(dZ * X, axis=1, keepdims=True)
+            db = np.sum(dZ, axis=1, keepdims=False)
+
+            # update, use mean-cross entropy loss
+            w = (1 - lr * 2 * l / m) * w - lr * dw / m
+            b = b - lr * dw / m
+
+            if show_loss is True and i % 100 == 0:
+                print('{}, loss: {}'.format(i, loss))
+
+        if show_loss is True:
+            print(losses[len(losses) - 1])
+            plt.plot(losses)
+
+        self.w = w.squeeze()
+        self.b = b
+
+    def train(self, data, epoches=1000, lr=0.01, l=0.01, show_loss=False):
+        X, y = data[:, 0:2], data[:, 2]
+        self.fit(X, y, epoches, lr, l, show_loss)
+
+    def predict(self, X):
+        """
+        Give predictions on the trained model
+        X: (m, n)  m(# training e.g.)  n(# features)
+
+        return y: (m, )
+        """
+        # reshape
+        X = X.transpose()  # (n, m)
+        w = self.w.reshape(-1, 1)  # (n, 1)
+        b = self.b
+
+        y = sigmoid(np.dot(w.T, X) + b)
+        y = y.squeeze()
+        y[y < 0] = -1
+        y[y >= 0] = 1
+        return y
 
 
 if __name__ == '__main__':
@@ -202,5 +434,3 @@ if __name__ == '__main__':
     print("test accuracy: {:.1f}%".format(acc_test * 100))
 
 
-# quit the matlab engine
-# eng.quit()
