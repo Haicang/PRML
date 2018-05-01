@@ -77,11 +77,10 @@ class SVM():
     SVM模型。
     """
 
-    def __init__(self, C=1, n_classes=2, kernel='g', loss=None, 
-        decision_function_shape='ovr'):
+    def __init__(self, C=1, n_classes=2, kernel='g', loss=None):
         """
         C: the hyperparameter in svm for overlap distribution
-        n_classes: the number of classification class
+        n_classes: the number of classification class, this class only support bi-classes
         kernel: {'g': gaussian, 'l': linear, 'p': ploy}
         loss: None for Lagrange max, 'hinge' for hinge loss(only for linear)
         decision_function_shape
@@ -116,6 +115,14 @@ class SVM():
         x_train = data_train[:, :2]  # feature [x1, x2]
         t_train = data_train[:, 2]  # 真实标签
 
+        self.fit(x_train, t_train, epoches)
+
+    def fit(self, X, t, epoches=1000):
+        """
+        Train the model
+        X: (n, 2)
+        t: (n, )
+        """
         if self.loss == None:
             self.fit_kernel(x_train, t_train)
         elif self.loss == 'hinge':
@@ -251,6 +258,95 @@ class SVM():
         
         self.w = w.squeeze()
         self.b = b
+
+
+class multiSVM():
+    def __init__(self, C=1, n_classes=2, kernel='g', loss=None, 
+        decision_function_shape='ovr'):
+        self.C = C
+        self.n_classes = n_classes
+        self.kernel = kernel
+        self.loss = loss
+        self.dfs = decision_function_shape
+
+        # To store multiple SVMs
+        self.models = []
+        # To store the labels for training data
+        # will also be used in prediction
+        
+        # Either one-over-rest or one-over-one
+        assert self.dfs in ('ovr', 'ovo')
+
+        # For the case of `ovr`
+        # models is a list<SVM> of len(list)=n_classes
+        # i in range(0, n_classes)
+        # this i-th class verse the rest SVM is models[i]
+        if self.dfs == 'ovr':
+            for _ in range(self.n_classes):
+                self.models.append(
+                    SVM(C, n_classes, kernel, loss))
+
+        # For the case of 'ovo':
+        # models is a list<SVM> of [[n-1], [n-2], ... , [1]], a triangle matrix
+        # i, j both in range(0, n_classes)
+        # assume i < j, the SVM between i-class and j-class (also j to i)
+        # model[i][j - i - 1]
+        elif self.dfs == 'ovo':
+            for i in range(n_classes - 1):
+                lst = []
+                for j in range(i + 1, n_classes):
+                    lst.append(
+                        SVM(C, n_classes, kernel, loss))
+                self.models.append(lst)
+
+        # Because of assertion, this part cannot be reached
+        else:
+            raise Exception('Decision function shape Error!\n' + 
+            'Use `ovr` or `ovo`')
+    
+    def train(self, data, epoches=100):
+        """
+        Train multiple models
+        """
+        # training features
+        X_raw = data[:, :2]
+        # training targets
+        T_raw = data[:, 2]
+        # number of training e.g.
+        n = X_raw.shape[0]
+        T = np.zeros(n)
+
+        # labels set
+        self.labels = tuple(set(list(T_raw)))
+
+        if self.dfs == 'ovr':
+            for (i, label) in enumerate(self.labels):
+                T[T_raw == label] = 1
+                T[T_raw != label] = -1
+                self.models[i].fit(X_raw, T)
+
+        elif self.dfs == 'ovo':
+            for i in range(self.n_classes - 1):
+                a = self.labels[i]
+                for j in range(i + 1, self.n_classes):
+                    b = self.labels[j]
+                    self.models[i][j - i - 1].fit(X, T)
+
+        else:
+            # Because of __init__, this part cannot be reached
+            pass
+
+    def predict(self, X):
+        """
+        X: (n, 2)
+        """
+        if self.dfs == 'ovr':
+            pass
+        elif self.dfs == 'ovo':
+            pass
+        else:
+            # Because of __init__, this part cannot be reached
+            pass
 
 
 class Linear():
