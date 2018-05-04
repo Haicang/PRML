@@ -124,12 +124,12 @@ class SVM():
         t: (n, )
         """
         if self.loss == None:
-            self.fit_kernel(x_train, t_train)
+            self.fit_kernel(X, t)
         elif self.loss == 'hinge':
             # Only linear kernel is valid for hinge loss
             # self.kernel = linear
             assert self.kernel == linear
-            self.fit_hinge(x_train, t_train, epoches)
+            self.fit_hinge(X, t, epoches)
         else:
             raise Exception('Loss function not found.')
 
@@ -307,6 +307,7 @@ class multiSVM():
     def train(self, data, epoches=100):
         """
         Train multiple models
+        epoches is only used in hinge loss
         """
         # training features
         X_raw = data[:, :2]
@@ -314,23 +315,32 @@ class multiSVM():
         T_raw = data[:, 2]
         # number of training e.g.
         n = X_raw.shape[0]
-        T = np.zeros(n)
-
+        
         # labels set
         self.labels = tuple(set(list(T_raw)))
 
         if self.dfs == 'ovr':
+            T = np.zeros(n)
             for (i, label) in enumerate(self.labels):
                 T[T_raw == label] = 1
                 T[T_raw != label] = -1
-                self.models[i].fit(X_raw, T)
+                self.models[i].fit(X_raw, T, epoches)
 
         elif self.dfs == 'ovo':
             for i in range(self.n_classes - 1):
                 a = self.labels[i]
                 for j in range(i + 1, self.n_classes):
                     b = self.labels[j]
-                    self.models[i][j - i - 1].fit(X, T)
+
+                    # Constructing the training set for very ovo SVM
+                    X1 = X_raw[T_raw == a]
+                    T1 = np.ones((X1.shape[0], ))
+                    X2 = X_raw[T_raw == b]
+                    T2 = -np.ones((X2.shape[0], ))
+                    X = np.concatenate((X1, X2), axis=0)
+                    T = np.concatenate((T1, T2), axis=0)
+
+                    self.models[i][j - i - 1].fit(X, T, epoches)
 
         else:
             # Because of __init__, this part cannot be reached
@@ -356,10 +366,22 @@ class multiSVM():
                 pred[preds[:, i] == 1] = self.labels[i]
 
         elif self.dfs == 'ovo':
-            pass
+            tmp_pred = np.zeros((m, ))
+            for i in range(self.n_classes - 1):
+                for j in range(i + 1, self.n_classes):
+                    model = self.models[i][j - i - 1]
+                    tmp_pred = model.predict(X)
+                    preds[tmp_pred > 0, i] += 1
+                    preds[tmp_pred < 0, j] += 1
+            tmp_pred = np.argmax(preds, axis=1)
+            # convert the index into the actual labels
+            for (i, label) in enumerate(self.labels):
+                pred[tmp_pred == i] = label
         else:
             # Because of __init__, this part cannot be reached
             pass
+
+        return pred
 
 
 class Linear():

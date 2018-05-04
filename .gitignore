@@ -1,5 +1,9 @@
 # Project customed
-lab1/.idea/
+.idea/
+report/
+*.zip
+*.pdf
+.DS_Store
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
