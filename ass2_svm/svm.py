@@ -338,10 +338,23 @@ class multiSVM():
 
     def predict(self, X):
         """
-        X: (n, 2)
+        X: (m, 2)
         """
+        # numbers of test e.g.
+        m = X.shape[0]
+
+        # raw predictions based on many SVMs
+        preds = np.zeros((m, self.n_classes))
+        # choice the first positive label
+        pred = np.zeros((m, ))
+
         if self.dfs == 'ovr':
-            pass
+            for (i, model) in enumerate(self.models):
+                preds[:, i] = model.predict(X)
+            # choice the last positive
+            for i in range(self.n_classes):
+                pred[preds[:, i] == 1] = self.labels[i]
+
         elif self.dfs == 'ovo':
             pass
         else:
