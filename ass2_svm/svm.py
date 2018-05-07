@@ -108,16 +108,17 @@ class SVM():
 
         self.loss = loss
 
-    def train(self, data_train, epoches=1000):
+    def train(self, data_train, epochs=1000):
         """
         训练模型。
         """
-        x_train = data_train[:, :2]  # feature [x1, x2]
-        t_train = data_train[:, 2]  # 真实标签
+        n = data_train.shape[1] - 1
+        x_train = data_train[:, :n]  # feature [x1, x2]
+        t_train = data_train[:, n]  # 真实标签
 
-        self.fit(x_train, t_train, epoches)
+        self.fit(x_train, t_train, epochs)
 
-    def fit(self, X, t, epoches=1000):
+    def fit(self, X, t, epochs=1000):
         """
         Train the model
         X: (n, 2)
@@ -129,7 +130,7 @@ class SVM():
             # Only linear kernel is valid for hinge loss
             # self.kernel = linear
             assert self.kernel == linear
-            self.fit_hinge(X, t, epoches)
+            self.fit_hinge(X, t, epochs)
         else:
             raise Exception('Loss function not found.')
 
@@ -219,7 +220,7 @@ class SVM():
         col = np.sum(col, axis=1, keepdims=False)
         self.b = 1./self.num * np.sum(np.squeeze(self.t) - col, keepdims=False)
 
-    def fit_hinge(self, X, t, epoches=1000, lr=0.0001, l = 0.01):
+    def fit_hinge(self, X, t, epochs=1000, lr=0.0001, l = 0.01):
         """
         Use the hinge loss for linear kernel
         X: (m, 2)
@@ -233,12 +234,13 @@ class SVM():
         X = X.T
         t = t.reshape(1, -1)
         m = X.shape[1]
+        n = X.shape[0]
 
         # intialization
-        w = np.random.randn(2, 1)
+        w = np.random.randn(n, 1)
         b = 0
 
-        for _ in range(epoches):
+        for _ in range(epochs):
             # forward
             Y = np.dot(w.T, X) + b  # (1, n)
             Z = 1 - Y * t  # (1, n)
@@ -246,7 +248,7 @@ class SVM():
             # back
             dw = -X
             dw[:, Z.squeeze() <= 0] = 0
-            dw = np.sum(dw, axis=1, keepdims=True)  # (2, 1)
+            dw = np.sum(dw, axis=1, keepdims=True)  # (n, 1)
             db = - np.ones((1, m))
             db[:, Z.squeeze() <= 0] = 0
             db = np.sum(db, keepdims=False)
@@ -304,27 +306,38 @@ class multiSVM():
             raise Exception('Decision function shape Error!\n' + 
             'Use `ovr` or `ovo`')
     
-    def train(self, data, epoches=100):
+    def train(self, data, epochs=100):
         """
         Train multiple models
-        epoches is only used in hinge loss
+        epochs is only used in hinge loss
         """
-        # training features
-        X_raw = data[:, :2]
+        # (m, n): m -- number training examples; n -- number of features
+        # m = data.shape[0]
+        n = data.shape[1] - 1
+        # training set
+        X_raw = data[:, :n]
         # training targets
-        T_raw = data[:, 2]
+        T_raw = data[:, n]
+        self.fit(X_raw, T_raw, epochs)
+
+    def fit(self, X, t, epochs=100):
+        """
+        Train multiple models
+        epochs is only used in hinge loss
+        """
+        X_raw, T_raw = X, t
         # number of training e.g.
-        n = X_raw.shape[0]
+        m = X_raw.shape[0]
         
         # labels set
         self.labels = tuple(set(list(T_raw)))
 
         if self.dfs == 'ovr':
-            T = np.zeros(n)
+            T = np.zeros(m)
             for (i, label) in enumerate(self.labels):
                 T[T_raw == label] = 1
                 T[T_raw != label] = -1
-                self.models[i].fit(X_raw, T, epoches)
+                self.models[i].fit(X_raw, T, epochs)
 
         elif self.dfs == 'ovo':
             for i in range(self.n_classes - 1):
@@ -340,7 +353,7 @@ class multiSVM():
                     X = np.concatenate((X1, X2), axis=0)
                     T = np.concatenate((T1, T2), axis=0)
 
-                    self.models[i][j - i - 1].fit(X, T, epoches)
+                    self.models[i][j - i - 1].fit(X, T, epochs)
 
         else:
             # Because of __init__, this part cannot be reached
@@ -396,12 +409,12 @@ class Linear():
         self.w = None
         self.b = None
 
-    def fit(self, X, y, epoches=100, lr=0.01, l=0.01, show_loss=False):
+    def fit(self, X, y, epochs=100, lr=0.01, l=0.01, show_loss=False):
         """
         Train the linear classifier with the training set
         X: (m, n)  training features
         y: (m, )  training targets
-        epoches: iterating times
+        epochs: iterating times
         lr: learning rate
         l:  l-2 penalty
         """
@@ -422,7 +435,7 @@ class Linear():
         if show_loss is True:
             losses = []
 
-        for i in range(epoches):
+        for i in range(epochs):
             # forward
             # the predictions (1, m)
             P = np.dot(w.T, X) + b
@@ -452,9 +465,11 @@ class Linear():
         self.w = w.squeeze()
         self.b = b
 
-    def train(self, data, epoches=100, lr=0.01, l=0.01, show_loss=False):
-        X, y = data[:, 0:2], data[:, 2]
-        self.fit(X, y, epoches, lr, l, show_loss)
+    def train(self, data, epochs=100, lr=0.01, l=0.01, show_loss=False):
+        # n: the number of features
+        n = data.shape[1] - 1
+        X, y = data[:, 0:n], data[:, n]
+        self.fit(X, y, epochs, lr, l, show_loss)
 
     def predict(self, X):
         """
@@ -483,12 +498,12 @@ class Logistic():
         self.w = None
         self.b = None
 
-    def fit(self, X, y, epoches=1000, lr=0.01, l=0.01, show_loss=False):
+    def fit(self, X, y, epochs=1000, lr=0.01, l=0.01, show_loss=False):
         """
         Train the linear classifier with the training set
         X: (m, n)  training features
         y: (m, )  training targets
-        epoches: iterating times
+        epochs: iterating times
         lr: learning rate
         l:  l-2 penalty
         """
@@ -509,7 +524,7 @@ class Logistic():
         if show_loss is True:
             losses = []
 
-        for i in range(epoches):
+        for i in range(epochs):
             # forward
             Z = np.dot(w.T, X) + b
             A = sigmoid(Z * Y)
@@ -529,7 +544,7 @@ class Logistic():
 
             # update, use mean-cross entropy loss
             w = (1 - lr * 2 * l / m) * w - lr * dw / m
-            b = b - lr * dw / m
+            b = b - lr * db / m
 
             if show_loss is True and i % 100 == 0:
                 print('{}, loss: {}'.format(i, loss))
@@ -541,9 +556,11 @@ class Logistic():
         self.w = w.squeeze()
         self.b = b
 
-    def train(self, data, epoches=1000, lr=0.01, l=0.01, show_loss=False):
-        X, y = data[:, 0:2], data[:, 2]
-        self.fit(X, y, epoches, lr, l, show_loss)
+    def train(self, data, epochs=1000, lr=0.01, l=0.01, show_loss=False):
+        # n: the number of training features
+        n = data.shape[1] - 1
+        X, y = data[:, 0:n], data[:, n]
+        self.fit(X, y, epochs, lr, l, show_loss)
 
     def predict(self, X):
         """
