@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 from threading import Thread
 
 
-def make_meshgrid(x, y, h=.02):
+def make_meshgrid(x, y, h=.05):
     """Create a mesh of points to plot in
 
     Parameters
@@ -60,11 +60,14 @@ def plot_contours(ax, clf, xx, yy, **params):
     return out
 
 
-def show_models(models, titles, X, t, savename=None):
-    n = len(models)
+def show_models(models, titles, X, t, shape, savename=None):
+    """
+    shape is np.ndarray of shape(a, b)
+    """
+    a, b = shape
 
-    fig, sub = plt.subplots(1, n)
-    fig.set_size_inches(5 * n, 5)
+    fig, sub = plt.subplots(a, b)
+    fig.set_size_inches(5 * b, 5 * a)
     plt.subplots_adjust(wspace=0.4, hspace=0.4)
 
     X0, X1 = X[:, 0], X[:, 1]

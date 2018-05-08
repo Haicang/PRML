@@ -109,7 +109,7 @@ class SVM():
         self.loss = loss
 
     def train(self, data_train, 
-            epochs=1000, lr=0.0001, l=0.0001, show=False):
+            epochs=100, lr=0.001, l=0.001, show=False):
         """
         训练模型。
         """
@@ -120,7 +120,7 @@ class SVM():
         self.fit(x_train, t_train, epochs, lr, l, show)
 
     def fit(self, X, t, 
-            epochs=1000, lr=0.0001, l=0.0001, show=False):
+            epochs=100, lr=0.001, l=0.001, show=False):
         """
         Train the model
         X: (n, 2)
@@ -226,7 +226,7 @@ class SVM():
         self.b = 1./self.num * np.sum(np.squeeze(self.t) - col, keepdims=False)
 
     def fit_hinge(self, X, t, 
-            epochs=1000, lr=0.0001, l = 0.0001, show=False):
+                  epochs=100, lr=0.001, l=0.001, show=False):
         """
         Use the hinge loss for linear kernel
         X: (m, 2)
@@ -431,7 +431,7 @@ class Linear():
         self.w = None
         self.b = None
 
-    def fit(self, X, y, epochs=1000, lr=0.01, l=0.01, show_loss=False):
+    def fit(self, X, y, epochs=100, lr=0.01, l=0.0001, show_loss=False):
         """
         Train the linear classifier with the training set
         X: (m, n)  training features
@@ -487,7 +487,7 @@ class Linear():
         self.w = w.squeeze()
         self.b = b
 
-    def train(self, data, epochs=1000, lr=0.01, l=0.01, show_loss=False):
+    def train(self, data, epochs=100, lr=0.01, l=0.0001, show_loss=False):
         # n: the number of features
         n = data.shape[1] - 1
         X, y = data[:, 0:n], data[:, n]
@@ -598,8 +598,8 @@ class Logistic():
 
         y = sigmoid(np.dot(w.T, X) + b)
         y = y.squeeze()
-        y[y < 0] = -1
-        y[y >= 0] = 1
+        y[y < 0.5] = -1
+        y[y >= 0.5] = 1
         return y
 
 
