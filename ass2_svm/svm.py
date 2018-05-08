@@ -2,7 +2,7 @@
 # encoding: utf-8
 
 import numpy as np
-from cvxopt import matrix
+from cvxopt import matrix, solvers
 from cvxopt.solvers import qp
 import matplotlib.pyplot as plt
 from utils import *
@@ -108,7 +108,7 @@ class SVM():
 
         self.loss = loss
 
-    def train(self, data_train, epochs=1000):
+    def train(self, data_train, epochs=1000, show=False):
         """
         训练模型。
         """
@@ -116,13 +116,15 @@ class SVM():
         x_train = data_train[:, :n]  # feature [x1, x2]
         t_train = data_train[:, n]  # 真实标签
 
-        self.fit(x_train, t_train, epochs)
+        self.fit(x_train, t_train, epochs, show)
 
-    def fit(self, X, t, epochs=1000):
+    def fit(self, X, t, epochs=1000, show=False):
         """
         Train the model
         X: (n, 2)
         t: (n, )
+
+        `epochs` and `show` are only used for hinge loss
         """
         if self.loss == None:
             self.fit_kernel(X, t)
@@ -190,6 +192,7 @@ class SVM():
         A = matrix(t.reshape(1, -1))
         b = matrix(0.0)
 
+        solvers.options['show_progress'] = False
         sol = qp(P, q, G, h, A, b)
         a = np.array(sol['x'])
         a = a.squeeze()
@@ -220,7 +223,7 @@ class SVM():
         col = np.sum(col, axis=1, keepdims=False)
         self.b = 1./self.num * np.sum(np.squeeze(self.t) - col, keepdims=False)
 
-    def fit_hinge(self, X, t, epochs=1000, lr=0.0001, l = 0.01):
+    def fit_hinge(self, X, t, epochs=1000, lr=0.0001, l = 0.0001):
         """
         Use the hinge loss for linear kernel
         X: (m, 2)
@@ -409,7 +412,7 @@ class Linear():
         self.w = None
         self.b = None
 
-    def fit(self, X, y, epochs=100, lr=0.01, l=0.01, show_loss=False):
+    def fit(self, X, y, epochs=1000, lr=0.01, l=0.01, show_loss=False):
         """
         Train the linear classifier with the training set
         X: (m, n)  training features
@@ -465,7 +468,7 @@ class Linear():
         self.w = w.squeeze()
         self.b = b
 
-    def train(self, data, epochs=100, lr=0.01, l=0.01, show_loss=False):
+    def train(self, data, epochs=1000, lr=0.01, l=0.01, show_loss=False):
         # n: the number of features
         n = data.shape[1] - 1
         X, y = data[:, 0:n], data[:, n]
@@ -532,7 +535,7 @@ class Logistic():
             # compute loss
             if show_loss is True:
                 loss = np.squeeze(
-                    np.sum(Z ** 2, keepdims=False) + l * np.dot(w.T, w))
+                    np.sum(-np.log(A), keepdims=False) + l * np.dot(w.T, w))
                 losses.append(loss)
 
             # backprop
