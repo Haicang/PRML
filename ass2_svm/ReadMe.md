@@ -10,12 +10,13 @@ There are 4 classes defined in  `svm.py` ：
 ### class SVM
 
 ```python
-class SVM(C=1, kernel='g', loss=None):
+class SVM(C=1, kernel='g', power=2, loss=None):
 ```
 
 - C: penalty parameter C of the error term
 - kernel: kernel functions, optional: 'g'—gaussian, 'p': polynomial, 'l': linear
 - loss: if `None`, svm use convex optimization , if 'hinge'(kernel=='l' only) use hinge loss, else Exception raised
+- power: the power of ploynomial kernel, and only used in it.
 
 ```python
 def train(data_train, epochs=1000, lr=0.01, l=0.01, show=False):

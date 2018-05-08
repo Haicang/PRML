@@ -77,17 +77,21 @@ class SVM():
     SVM模型。
     """
 
-    def __init__(self, C=1, n_classes=2, kernel='g', loss=None):
+    def __init__(self, C=1, kernel='g', power=2, loss=None):
         """
         C: the hyperparameter in svm for overlap distribution
-        n_classes: the number of classification class, this class only support bi-classes
         kernel: {'g': gaussian, 'l': linear, 'p': ploy}
         loss: None for Lagrange max, 'hinge' for hinge loss(only for linear)
         decision_function_shape
         """
-        self.n = n_classes
         self.kernel = Kernels[kernel]
         self.C = C
+
+        # custom the power of the ploy kernel
+        def poly_custom(x1, x2):
+            return poly(x1, x2, power)
+        if kernel == 'g':
+            self.kernel = poly_custom
 
         # a.shape = (m, 1)
         # only support vectors' a are stored,
@@ -109,7 +113,7 @@ class SVM():
         self.loss = loss
 
     def train(self, data_train, 
-            epochs=100, lr=0.001, l=0.001, show=False):
+            epochs=100, lr=0.001, l=0.001, show_loss=False):
         """
         训练模型。
         """
@@ -117,10 +121,10 @@ class SVM():
         x_train = data_train[:, :n]  # feature [x1, x2]
         t_train = data_train[:, n]  # 真实标签
 
-        self.fit(x_train, t_train, epochs, lr, l, show)
+        self.fit(x_train, t_train, epochs, lr, l, show_loss)
 
     def fit(self, X, t, 
-            epochs=100, lr=0.001, l=0.001, show=False):
+            epochs=100, lr=0.001, l=0.001, show_loss=False):
         """
         Train the model
         X: (n, 2)
@@ -134,7 +138,7 @@ class SVM():
             # Only linear kernel is valid for hinge loss
             # self.kernel = linear
             assert self.kernel == linear
-            self.fit_hinge(X, t, epochs, lr, l, show)
+            self.fit_hinge(X, t, epochs, lr, l, show_loss)
         else:
             raise Exception('Loss function not found.')
 
@@ -226,7 +230,7 @@ class SVM():
         self.b = 1./self.num * np.sum(np.squeeze(self.t) - col, keepdims=False)
 
     def fit_hinge(self, X, t, 
-                  epochs=100, lr=0.001, l=0.001, show=False):
+                  epochs=100, lr=0.001, l=0.001, show_loss=False):
         """
         Use the hinge loss for linear kernel
         X: (m, 2)
@@ -254,7 +258,7 @@ class SVM():
             Z = 1 - Y * t  # (1, n)
 
             # compute loss
-            if show is True:
+            if show_loss is True:
                 loss = np.sum(np.maximum(0, Z)) + l * np.dot(w.T, w)
                 loss = np.squeeze(loss)
                 losses.append(loss)
@@ -273,10 +277,10 @@ class SVM():
             b = b - lr * db / m
 
             # show the loss
-            if show is True and i % 100 == 0:
+            if show_loss is True and i % 100 == 0:
                 print('{}, loss: {}'.format(i, loss))
 
-        if show is True:
+        if show_loss is True:
             print('Final loss: {}'.format(losses[len(losses) - 1]))
             plt.plot(losses)
 
