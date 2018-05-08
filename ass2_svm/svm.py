@@ -108,7 +108,8 @@ class SVM():
 
         self.loss = loss
 
-    def train(self, data_train, epochs=1000, show=False):
+    def train(self, data_train, 
+            epochs=1000, lr=0.0001, l=0.0001, show=False):
         """
         训练模型。
         """
@@ -116,9 +117,10 @@ class SVM():
         x_train = data_train[:, :n]  # feature [x1, x2]
         t_train = data_train[:, n]  # 真实标签
 
-        self.fit(x_train, t_train, epochs, show)
+        self.fit(x_train, t_train, epochs, lr, l, show)
 
-    def fit(self, X, t, epochs=1000, show=False):
+    def fit(self, X, t, 
+            epochs=1000, lr=0.0001, l=0.0001, show=False):
         """
         Train the model
         X: (n, 2)
@@ -132,7 +134,7 @@ class SVM():
             # Only linear kernel is valid for hinge loss
             # self.kernel = linear
             assert self.kernel == linear
-            self.fit_hinge(X, t, epochs)
+            self.fit_hinge(X, t, epochs, lr, l, show)
         else:
             raise Exception('Loss function not found.')
 
@@ -223,7 +225,8 @@ class SVM():
         col = np.sum(col, axis=1, keepdims=False)
         self.b = 1./self.num * np.sum(np.squeeze(self.t) - col, keepdims=False)
 
-    def fit_hinge(self, X, t, epochs=1000, lr=0.0001, l = 0.0001):
+    def fit_hinge(self, X, t, 
+            epochs=1000, lr=0.0001, l = 0.0001, show=False):
         """
         Use the hinge loss for linear kernel
         X: (m, 2)
@@ -243,16 +246,24 @@ class SVM():
         w = np.random.randn(n, 1)
         b = 0
 
-        for _ in range(epochs):
+        losses = []
+
+        for i in range(epochs):
             # forward
             Y = np.dot(w.T, X) + b  # (1, n)
             Z = 1 - Y * t  # (1, n)
 
+            # compute loss
+            if show is True:
+                loss = np.sum(np.maximum(0, Z)) + l * np.dot(w.T, w)
+                loss = np.squeeze(loss)
+                losses.append(loss)
+
             # back
-            dw = -X
+            dw = - t * X
             dw[:, Z.squeeze() <= 0] = 0
             dw = np.sum(dw, axis=1, keepdims=True)  # (n, 1)
-            db = - np.ones((1, m))
+            db = - t * np.ones((1, m))
             db[:, Z.squeeze() <= 0] = 0
             db = np.sum(db, keepdims=False)
 
@@ -260,7 +271,15 @@ class SVM():
             # use mean here
             w = (1 - 2 * l * lr / m) * w - lr * dw / m
             b = b - lr * db / m
-        
+
+            # show the loss
+            # if show is True and i % 100 == 0:
+            #     print('{}, loss: {}'.format(i, loss))
+
+        if show is True:
+            print('Final loss: {}'.format(losses[len(losses) - 1]))
+            plt.plot(losses)
+
         self.w = w.squeeze()
         self.b = b
 
