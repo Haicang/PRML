@@ -18,15 +18,19 @@ class SVM(C=1, kernel='g', loss=None):
 - loss: if `None`, svm use convex optimization , if 'hinge'(kernel=='l' only) use hinge loss, else Exception raised
 
 ```python
-def train(data_train, epochs=1000):
+def train(data_train, epochs=1000, lr=0.01, l=0.01, show=False):
 ```
 
 - data_train: np.ndarray of shape(m, n + 1), the last colunm is the targets of training set, m is the number of training examples while n is the number of features
 - epochs: used for linear kernel on hinge loss only
+- The parameters behind `epochs` is only used in hinge loss
+  - lr: learning rate
+  - l: l-2 penalty
+  - show: show the process of the gradient descent
 - **return** None
 
 ```python
-def fit(X, y, epochs=1000):
+def fit(X, y, epochs=1000, lr=0.01, l=0.01, show=False)
 ```
 
 Another version of `def train`

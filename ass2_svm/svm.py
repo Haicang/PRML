@@ -273,8 +273,8 @@ class SVM():
             b = b - lr * db / m
 
             # show the loss
-            # if show is True and i % 100 == 0:
-            #     print('{}, loss: {}'.format(i, loss))
+            if show is True and i % 100 == 0:
+                print('{}, loss: {}'.format(i, loss))
 
         if show is True:
             print('Final loss: {}'.format(losses[len(losses) - 1]))
