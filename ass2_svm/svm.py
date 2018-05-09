@@ -90,7 +90,7 @@ class SVM():
         # custom the power of the ploy kernel
         def poly_custom(x1, x2):
             return poly(x1, x2, power)
-        if kernel == 'g':
+        if kernel == 'p':
             self.kernel = poly_custom
 
         # a.shape = (m, 1)
@@ -312,7 +312,7 @@ class multiSVM():
         if self.dfs == 'ovr':
             for _ in range(self.n_classes):
                 self.models.append(
-                    SVM(C, n_classes, kernel, loss))
+                    SVM(C, kernel, loss=loss))
 
         # For the case of 'ovo':
         # models is a list<SVM> of [[n-1], [n-2], ... , [1]], a triangle matrix
@@ -324,7 +324,7 @@ class multiSVM():
                 lst = []
                 for j in range(i + 1, n_classes):
                     lst.append(
-                        SVM(C, n_classes, kernel, loss))
+                        SVM(C, kernel, loss=loss))
                 self.models.append(lst)
 
         # Because of assertion, this part cannot be reached
@@ -435,7 +435,7 @@ class Linear():
         self.w = None
         self.b = None
 
-    def fit(self, X, y, epochs=100, lr=0.01, l=0.0001, show_loss=False):
+    def fit(self, X, y, epochs=200, lr=0.0001, l=0.0001, show_loss=False):
         """
         Train the linear classifier with the training set
         X: (m, n)  training features
@@ -491,7 +491,7 @@ class Linear():
         self.w = w.squeeze()
         self.b = b
 
-    def train(self, data, epochs=100, lr=0.01, l=0.0001, show_loss=False):
+    def train(self, data, epochs=200, lr=0.0001, l=0.0001, show_loss=False):
         # n: the number of features
         n = data.shape[1] - 1
         X, y = data[:, 0:n], data[:, n]
@@ -524,7 +524,7 @@ class Logistic():
         self.w = None
         self.b = None
 
-    def fit(self, X, y, epochs=1000, lr=0.01, l=0.01, show_loss=False):
+    def fit(self, X, y, epochs=200, lr=0.005, l=0.01, show_loss=False):
         """
         Train the linear classifier with the training set
         X: (m, n)  training features
@@ -582,7 +582,7 @@ class Logistic():
         self.w = w.squeeze()
         self.b = b
 
-    def train(self, data, epochs=1000, lr=0.01, l=0.01, show_loss=False):
+    def train(self, data, epochs=200, lr=0.005, l=0.01, show_loss=False):
         # n: the number of training features
         n = data.shape[1] - 1
         X, y = data[:, 0:n], data[:, n]
