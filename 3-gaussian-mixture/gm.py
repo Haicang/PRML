@@ -75,7 +75,7 @@ class KMeans():
         self.mu = None
 
     def fit(self, X):
-        
+
         def update_mu(X, c, mu):
             """
             To update mu in K-means
@@ -136,7 +136,11 @@ def Mstep(X, W, phi, mu, sigma):
     # update mu
     (m, k) = W.shape
     for j in range(k):
-        mu[j] = np.sum(W[:, j] * X, axis=0) / np.sum(W[:, j], axis=0)
+        #         print(W.shape, X.shape)
+        col = np.reshape(W[:, j], (-1, 1))
+        mu[j] = np.sum(col * X, axis=0) / np.sum(col, axis=0)
+#         Sum = np.sum(W[:, j] * X, axis=0)
+#         mu[j] = Sum / np.sum(W[:, j], axis=0)
 
     # update sigma
     for j in range(k):
@@ -149,7 +153,7 @@ def Mstep(X, W, phi, mu, sigma):
 
 
 class GaussianMixture():
-    
+
     def __init__(self, n_cluster, max_iter=100, tol=0.0001):
         self.n = n_cluster
         self.epochs = max_iter
@@ -160,8 +164,12 @@ class GaussianMixture():
         self.mu = None
         self.sigma = None
 
-    def fit(self, X):
-        
+    def fit(self, X, init='kmeans', init_iter=10):
+        """
+        Init the fit with `kmeans`, 
+        but can be set as None, and use random init
+        """
+
         # These functions are replaced by `Estep` and `Mstep`
         def update_W():
             pass
@@ -175,7 +183,7 @@ class GaussianMixture():
             for j in range(k):
                 mu[j] = np.sum(W[:, j] * X, axis=0) / np.sum(W[:, j], axis=0)
             return mu
-        
+
         def update_sigma(W, X, mu, sigma):
             for j in range(k):
                 for i in range(m):
@@ -187,9 +195,14 @@ class GaussianMixture():
         m = X.shape[0]
         n = X.shape[1]
         k = self.n
-        
+
         # Init params with k-means
-        kmeans = KMeans(k)
+        if init == 'kmeans':
+            max_iter = init_iter
+        else:
+            max_iter = 0
+
+        kmeans = KMeans(k, max_iter=0)
         kmeans.fit(X)
         mu = copy.deepcopy(kmeans.mu)
 
