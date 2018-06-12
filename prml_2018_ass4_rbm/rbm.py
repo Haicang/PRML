@@ -24,7 +24,7 @@ class RBM:
         self.a = np.zeros((n_observe, 1))
         self.b = np.zeros((n_hidden, 1))
 
-    def train(self, data, T=10, learning_rate=0.01):
+    def train(self, data, T=10, learning_rate=0.01, batch_size=16):
         """Train model using data."""
         # Reshape the training data
         data = np.reshape(data, (-1, self.nv, 1))
@@ -67,7 +67,7 @@ class RBM:
 
         self.W, self.a, self.b = W, a, b
 
-    def sample(self, T=100):
+    def sample(self, n=1, T=10):
         """Sample from trained model."""
         W, a, b = self.W, self.a, self.b
 
