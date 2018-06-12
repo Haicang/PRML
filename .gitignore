@@ -4,6 +4,10 @@ report/
 *.zip
 *.pdf
 .DS_Store
+*.ipynb
+submit/
+*.png
+.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -109,3 +113,8 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+prml_2018_ass4_rbm/rbm_raw.py
+lab1/for_stkof.py
+lab1/test.py
+prml_2018_ass4_rbm/mnist_bin.npy
+prml_2018_ass4_rbm/.vscode/settings.json
