@@ -3,6 +3,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import pickle
 
 
 def sigmoid(z):
@@ -27,7 +28,7 @@ class RBM:
     def train(self, data, T=10, learning_rate=0.01, batch_size=16):
         """Train model using data."""
         # Reshape the training data
-        data = np.reshape(data, (-1, self.nv, 1))
+        data = np.reshape(data, (-1, self.nv))
 
         # Number of training e.g.
         N = data.shape[0]
@@ -37,15 +38,19 @@ class RBM:
         # Variables of the model
         W, a, b = self.W, self.a, self.b
         # The hidden variables(vec)
-        h = np.zeros((self.nh, 1))
-        v = np.zeros((self.nv, 1))
-        hp = np.zeros((self.nh, 1))  # h_prime
-        vp = np.zeros((self.nv, 1))  # v_prime
+        h = np.zeros((self.nh, batch_size))
+        v = np.zeros((self.nv, batch_size))
+        hp = np.zeros((self.nh, batch_size))  # h_prime
+        vp = np.zeros((self.nv, batch_size))  # v_prime
 
         for t in range(T):
-            for n in range(N):
-                assert v.shape == data[n].shape
-                v = data[n]
+            num_batch = int(N / batch_size)
+            for n in range(num_batch):
+                if (n + 1) * batch_size <= N:
+                    end = (n + 1) * batch_size
+                else:
+                    end = N
+                v = data[n * batch_size : end, :].T
 
                 p_hv = sigmoid(np.dot(W.T, v) + b)
                 h = sample_sigmoid(p_hv)
@@ -61,9 +66,12 @@ class RBM:
                 neg_grad = np.dot(vp, hp.T)
 
                 # Update params: W, a, b
-                W += alpha * (pos_grad - neg_grad)
-                a += alpha * (v - vp)
-                b += alpha * (h - hp)
+                W += alpha/batch_size * (pos_grad - neg_grad)
+                # print(((v - vp).shape))
+                # avg = np.average(v - vp, axis=1)
+                # print(avg.shape)
+                a += alpha / batch_size * np.sum(v - vp, axis=1, keepdims=True)
+                b += alpha / batch_size * np.sum(h - hp, axis=1, keepdims=True)
 
         self.W, self.a, self.b = W, a, b
 
@@ -71,7 +79,7 @@ class RBM:
         """Sample from trained model."""
         W, a, b = self.W, self.a, self.b
 
-        v = np.random.randn(self.nv, 1)
+        v = np.random.randn(self.nv, n)
         p_hv = sigmoid(np.dot(W.T, v) + b)
         h = sample_sigmoid(p_hv)
 
@@ -81,7 +89,21 @@ class RBM:
             p_hv = sigmoid(np.dot(W.T, v) + b)
             h = sample_sigmoid(p_hv)
 
-        return v
+        v = v.T
+        return v.reshape((n, 28, 28))
+
+
+def save_model(model, filename):
+    with open(filename, 'wb') as f:
+        pickle.dump(model, f)
+
+
+def load_model(filename):
+    """
+    Return model
+    """
+    with open(filename, 'rb') as f:
+        return pickle.load(f)
 
 
 # train restricted boltzmann machine using mnist dataset
