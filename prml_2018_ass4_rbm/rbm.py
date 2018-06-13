@@ -25,7 +25,7 @@ class RBM:
         self.a = np.zeros((n_observe, 1))
         self.b = np.zeros((n_hidden, 1))
 
-    def train(self, data, T=10, learning_rate=0.01, batch_size=16):
+    def train(self, data, T=10, learning_rate=0.01, batch_size=16, log=False):
         """Train model using data."""
         # Reshape the training data
         data = np.reshape(data, (-1, self.nv))
@@ -73,13 +73,25 @@ class RBM:
                 a += alpha / batch_size * np.sum(v - vp, axis=1, keepdims=True)
                 b += alpha / batch_size * np.sum(h - hp, axis=1, keepdims=True)
 
+                if log is True and n % 1000 == 0:
+                    print('Epoch %2d/%2d -- %d/%d' %(t+1, T, n, num_batch))
+            # if log is True:
+            #     print('Epoch: %d/%d' % (t+1, T))
+
         self.W, self.a, self.b = W, a, b
 
-    def sample(self, n=1, T=10):
-        """Sample from trained model."""
+    def sample(self, n=1, T=10, spciman=None):
+        """
+        Sample from trained model.
+        n: the number of samples, only used when spciman is None
+        spciman: some data from MNIST, of shape (n, 28, 28)
+        """
         W, a, b = self.W, self.a, self.b
 
-        v = np.random.randn(self.nv, n)
+        if spciman is None:
+            v = np.random.randn(self.nv, n)
+        else:
+            v = spciman.reshape(-1, 784).T
         p_hv = sigmoid(np.dot(W.T, v) + b)
         h = sample_sigmoid(p_hv)
 
@@ -90,6 +102,7 @@ class RBM:
             h = sample_sigmoid(p_hv)
 
         v = v.T
+        v[v > 0.5] = 1; v[v <= 0.5] = 0
         return v.reshape((n, 28, 28))
 
 
