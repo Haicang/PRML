@@ -2,6 +2,7 @@
 # encoding: utf-8
 
 import numpy as np
+import torch
 import matplotlib.pyplot as plt
 import pickle
 
@@ -12,6 +13,10 @@ def sigmoid(z):
 
 def sample_sigmoid(prob):
     return np.random.binomial(1, prob)
+
+
+def sample_sigmoid_torch(prob):
+    return torch.bernoulli(prob)
 
 
 class RBM:
@@ -45,7 +50,11 @@ class RBM:
 
         for t in range(T):
             num_batch = int(N / batch_size)
-            for n in range(num_batch):
+            # To shuffle in a epoch
+            indexes = np.random.permutation(num_batch)
+            # To indicate the percentage of an epoch
+            batch = 0
+            for n in indexes:
                 if (n + 1) * batch_size <= N:
                     end = (n + 1) * batch_size
                 else:
@@ -73,10 +82,9 @@ class RBM:
                 a += alpha / batch_size * np.sum(v - vp, axis=1, keepdims=True)
                 b += alpha / batch_size * np.sum(h - hp, axis=1, keepdims=True)
 
+                batch += 1
                 if log is True and n % 1000 == 0:
                     print('Epoch %2d/%2d -- %d/%d' %(t+1, T, n, num_batch))
-            # if log is True:
-            #     print('Epoch: %d/%d' % (t+1, T))
 
         self.W, self.a, self.b = W, a, b
 
@@ -104,6 +112,127 @@ class RBM:
         v = v.T
         v[v > 0.5] = 1; v[v <= 0.5] = 0
         return v.reshape((n, 28, 28))
+
+
+class RBMtorch():
+    """
+    Restricted Boltzmann Machine using pytorch
+    """
+    def __init__(self, n_hidden=2, n_observe=784):
+        self.nv = n_observe
+        self.nh = n_hidden
+        self.W = torch.zeros(self.nv, self.nh, dtype=torch.double)
+        self.a = torch.zeros(n_observe, 1, dtype=torch.double)
+        self.b = torch.zeros(n_hidden, 1, dtype=torch.double)
+
+    def train(self, data, T=10, learning_rate=0.005, batch_size=16, log=False, gpu=False):
+        """Train model using data."""
+        if gpu is True and torch.cuda.is_available():
+            gpu = True
+
+        if gpu is False:
+            # Reshape the training data
+            data = torch.DoubleTensor(np.reshape(data, (-1, self.nv)))
+
+            # Number of training e.g.
+            N = data.shape[0]
+            # learning_rate
+            alpha = learning_rate
+
+            # Variables of the model
+            W, a, b = self.W, self.a, self.b
+            # The hidden variables(vec)
+            h = torch.zeros(self.nh, batch_size, dtype=torch.double)
+            v = torch.zeros(self.nv, batch_size, dtype=torch.double)
+            hp = torch.zeros(self.nh, batch_size, dtype=torch.double)  # h_prime
+            vp = torch.zeros(self.nv, batch_size, dtype=torch.double)  # v_prime
+        else:
+            # Reshape the training data
+            data = torch.cuda.DoubleTensor(np.reshape(data, (-1, self.nv)))
+
+            # Number of training e.g.
+            N = data.shape[0]
+            # learning_rate
+            alpha = learning_rate
+
+            # Variables of the model
+            W, a, b = self.W.cuda(), self.a.cuda(), self.b.cuda()
+            # The hidden variables(vec)
+            h = torch.zeros(self.nh, batch_size, dtype=torch.double).cuda()
+            v = torch.zeros(self.nv, batch_size, dtype=torch.double).cuda()
+            hp = torch.zeros(self.nh, batch_size,
+                             dtype=torch.double).cuda()  # h_prime
+            vp = torch.zeros(self.nv, batch_size,
+                             dtype=torch.double).cuda()  # v_prime
+
+        for t in range(T):
+            num_batch = int(N / batch_size)
+            # To shuffle in a epoch, 
+            indexes = torch.randperm(num_batch).cuda()
+            # To indicate the percentage of an epoch
+            batch = 0
+            for n in indexes:
+                if (n + 1) * batch_size <= N:
+                    end = (n + 1) * batch_size
+                else:
+                    end = N
+                v = data[n * batch_size: end, :].t()
+
+                p_hv = torch.sigmoid(torch.mm(W.t(), v) + b)
+                h = torch.bernoulli(p_hv)
+
+                pos_grad = torch.mm(v, h.t())
+
+                p_vh = torch.sigmoid(torch.mm(W, h) + a)
+                vp = torch.bernoulli(p_vh)
+
+
+                p_hv = torch.sigmoid(torch.mm(W.t(), vp) + b)
+                hp = torch.bernoulli(p_hv)
+
+                neg_grad = torch.mm(vp, hp.t())
+
+                # Update params: W, a, b
+                W += alpha/batch_size * (pos_grad - neg_grad)
+                # print(((v - vp).shape))
+                # avg = np.average(v - vp, axis=1)
+                # print(avg.shape)
+                a += alpha / batch_size * torch.sum(v - vp, 1, keepdim=True)
+                b += alpha / batch_size * torch.sum(h - hp, 1, keepdim=True)
+
+                batch += 1
+                if log is True and batch % 1000 == 0:
+                    print('Epoch [%d/%d] -- %d/%d' % (t+1, T, batch, num_batch))
+            # if log is True:
+            #     print('Epoch: %d/%d' % (t+1, T))
+
+        self.W, self.a, self.b = W.cpu(), a.cpu(), b.cpu()
+
+    def sample(self, n=1, T=10, spciman=None):
+        """
+        Sample from trained model.
+        n: the number of samples, only used when spciman is None
+        spciman: some data from MNIST, of shape (n, 28, 28)
+        """
+        W, a, b = self.W, self.a, self.b
+
+        if spciman is None:
+            v = torch.randn(self.nv, n, dtype=torch.double)
+        else:
+            v = torch.DoubleTensor(spciman.reshape(-1, 784)).t()
+        p_hv = torch.sigmoid(torch.mm(W.t(), v) + b)
+        h = torch.bernoulli(p_hv)
+
+        for t in range(T):
+            p_vh = torch.sigmoid(torch.mm(W, h) + a)
+            v = torch.bernoulli(p_vh)
+            p_hv = torch.sigmoid(torch.mm(W.t(), v) + b)
+            h = torch.bernoulli(p_hv)
+
+        v = v.t()
+        v[v > 0.5] = 1
+        v[v <= 0.5] = 0
+        return v.reshape(-1, 28, 28)
 
 
 def save_model(model, filename):
