@@ -23,7 +23,14 @@ class RBM:
     """Restricted Boltzmann Machine."""
 
     def __init__(self, n_hidden=2, n_observe=784):
-        """Initialize model."""
+        """
+        Initialize model.
+        nh: number of hidden variables, int
+        nv: number of visible variables, int
+        W: weight matrix
+        a: bias of visible variables
+        b: bias of hidden variables
+        """
         self.nh = n_hidden
         self.nv = n_observe
         self.W = np.zeros((n_observe, n_hidden))
@@ -31,7 +38,14 @@ class RBM:
         self.b = np.zeros((n_hidden, 1))
 
     def train(self, data, T=10, learning_rate=0.01, batch_size=16, log=False):
-        """Train model using data."""
+        """
+        Train model using data.
+        data: [np.ndarray] a slice of mnist, of shape(n, 28, 28)
+        T: number of epoches
+        learning_rate:
+        batch_size:
+        log: if True, the program will print the training process
+        """
         # Reshape the training data
         data = np.reshape(data, (-1, self.nv))
 
@@ -119,6 +133,14 @@ class RBMtorch():
     Restricted Boltzmann Machine using pytorch
     """
     def __init__(self, n_hidden=2, n_observe=784):
+        """
+        Initialize model.
+        nh: number of hidden variables, int
+        nv: number of visible variables, int
+        W: weight matrix
+        a: bias of visible variables
+        b: bias of hidden variables
+        """
         self.nv = n_observe
         self.nh = n_hidden
         self.W = torch.zeros(self.nv, self.nh, dtype=torch.double)
@@ -126,7 +148,14 @@ class RBMtorch():
         self.b = torch.zeros(n_hidden, 1, dtype=torch.double)
 
     def train(self, data, T=10, learning_rate=0.005, batch_size=16, log=False, gpu=False):
-        """Train model using data."""
+        """
+        Train model using data.
+        data: [np.ndarray] a slice of mnist, of shape(n, 28, 28)
+        T: number of epoches
+        learning_rate:
+        batch_size:
+        log: if True, the program will print the training process
+        """
         if gpu is True and torch.cuda.is_available():
             gpu = True
 
