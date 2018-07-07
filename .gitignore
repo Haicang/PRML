@@ -8,6 +8,12 @@ report/
 submit/
 *.png
 .vscode/
+dataset/
+reference/
+*.doc
+*.docx
+*.tex
+*.model
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -118,3 +124,4 @@ lab1/for_stkof.py
 lab1/test.py
 prml_2018_ass4_rbm/mnist_bin.npy
 prml_2018_ass4_rbm/.vscode/settings.json
+prml_2018_ass4_rbm/demo.py
